@@ -1936,12 +1936,14 @@
 
       const count = Math.max(rows.length, 1);
       const rate = key => rows.filter(row => row[key]).length / count;
+      const top3ScoreHits = rows.filter(row => row.top3Hit).length;
+      const top3ScoreRate = rows.length ? top3ScoreHits / rows.length : 0;
       document.getElementById("verifyNote").textContent = `验真只统计已经有真实赛果的比赛。当前纳入 ${rows.length} 场，来源：${resultsSync.source}。`;
       document.getElementById("verifyKpis").innerHTML = [
         ["已赛样本", `${rows.length}场`, "样本很小，仅作校准参考"],
         ["胜平负方向", pct(rate("outcomeHit")), "看模型方向是否正确"],
         ["概率第1精确比分", pct(rate("exactHit")), "只看最高概率比分"],
-        ["前3比分命中", pct(rate("top3Hit")), "前三个概率比分任一命中"]
+        ["前3比分命中率", rows.length ? `${top3ScoreHits}/${rows.length} = ${pct(top3ScoreRate)}` : "暂无", "前三个概率比分任一命中"]
       ].map(([label, value, hint]) => `
         <div class="kpi">
           <div class="label">${label}</div>
