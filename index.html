@@ -2666,6 +2666,67 @@
       ].sort((a, b) => b.p - a.p)[0];
     }
 
+    function recommendationOutcomePick(model) {
+      const options = [
+        { key: "home", label: "主胜", short: "胜", p: model.home },
+        { key: "draw", label: "平局", short: "平", p: model.draw },
+        { key: "away", label: "客胜", short: "负", p: model.away }
+      ];
+      const sorted = [...options].sort((a, b) => b.p - a.p);
+      const best = sorted[0];
+      const draw = options.find(option => option.key === "draw");
+      const bestExact = model.scores?.[0];
+      const sideSpread = Math.abs(model.home - model.away);
+      const sideTop = Math.max(model.home, model.away);
+
+      const drawLooksFair =
+        bestExact &&
+        bestExact.a === bestExact.b &&
+        draw.p >= 0.22 &&
+        sideSpread <= 0.12 &&
+        sideTop <= 0.45;
+
+      const drawIsStrong =
+        draw.p >= 0.30 &&
+        sideSpread <= 0.08 &&
+        sideTop <= 0.43;
+
+      if (best.key === "draw" || drawLooksFair || drawIsStrong) return draw;
+      return best;
+    }
+
+    function recommendedScorePack(model, outcomeKey, count = 3) {
+      const scoped = model.scores.filter(score => scoreOutcomeKey(score) === outcomeKey);
+      const chosen = [];
+      const seen = new Set();
+
+      scoped.forEach(score => {
+        const text = `${score.a}-${score.b}`;
+        if (chosen.length >= count || seen.has(text)) return;
+        chosen.push(score);
+        seen.add(text);
+      });
+
+      model.scores.forEach(score => {
+        const text = `${score.a}-${score.b}`;
+        if (chosen.length >= count || seen.has(text)) return;
+        chosen.push(score);
+        seen.add(text);
+      });
+
+      return {
+        primary: chosen[0],
+        secondary: chosen[1],
+        tertiary: chosen[2],
+        primaryText: chosen[0] ? `${chosen[0].a}-${chosen[0].b}` : model.score,
+        secondaryText: chosen[1] ? `${chosen[1].a}-${chosen[1].b}` : model.altScore,
+        tertiaryText: chosen[2] ? `${chosen[2].a}-${chosen[2].b}` : model.thirdScore,
+        primaryProb: chosen[0]?.p ?? model.scoreProb,
+        secondaryProb: chosen[1]?.p ?? model.altScoreProb,
+        tertiaryProb: chosen[2]?.p ?? model.thirdScoreProb
+      };
+    }
+
     function handicapRecommendation(model) {
       const side = model.away > model.home + 0.03 ? "away" : "home";
       const totals = { win: 0, draw: 0, loss: 0 };
@@ -2817,10 +2878,11 @@
     function recommendationForFixture(fixture, cfg) {
       const context = contextForFixture(fixture, cfg);
       const model = matchModel(fixture.teamA, fixture.teamB, cfg, null, context);
-      const pick = outcomePick(model);
-      const halfPick = outcomePick(model.half);
+      const pick = recommendationOutcomePick(model);
+      const halfPick = recommendationOutcomePick(model.half);
       const handicap = handicapRecommendation(model);
       const totalPick = totalGoalsRecommendation(model);
+      const scores = recommendedScorePack(model, pick.key);
       const beforeOrder = fixture.known
         ? (Number.isFinite(Number(knownResultMeta[fixture.id]?.order)) ? Number(knownResultMeta[fixture.id].order) : Infinity)
         : Infinity;
@@ -2830,14 +2892,14 @@
       const favoriteNotWin = pick.key === "home" ? model.draw + model.away : pick.key === "away" ? model.home + model.draw : 1 - model.draw;
       const events = eventForecast(fixture.teamA, fixture.teamB, cfg, context);
       const logic = [
-        `客观：Elo差 ${Math.round(eloDiff)}，模型给${pick.label} ${pct(pick.p)}，前3比分 ${formatTopScores(model, 3)}`,
+        `客观：Elo差 ${Math.round(eloDiff)}，模型给${pick.label} ${pct(pick.p)}，联动比分 ${scores.primaryText} / ${scores.secondaryText} / ${scores.tertiaryText}`,
         tournamentClimateLine(beforeOrder),
         `状态：${teamFormLine(fixture.teamA, beforeOrder, cfg)}；${teamFormLine(fixture.teamB, beforeOrder, cfg)}`,
         `球员/风格：${teamLabel(fixture.teamA)}看 ${profileA.players}；${teamLabel(fixture.teamB)}看 ${profileB.players}；${profileA.style} 对 ${profileB.style}`,
         `事件倾向：${events.tension}，下半场黄牌${rangeText(events.second.yellow, "张")}，越位${rangeText(events.first.offside + events.second.offside, "次", 0.8)}`,
         `主观：${model.highGoals > 0.38 ? "本届大比分偏多，防4球以上" : "节奏偏常规"}；${favoriteNotWin > 0.40 ? "热门不胜风险偏高" : "方向相对集中"}`
       ];
-      return { fixture, model, pick, halfPick, handicap, totalPick, logic };
+      return { fixture, model, pick, halfPick, handicap, totalPick, scores, logic };
     }
 
     function renderTimelinePicks(cfg) {
@@ -2860,6 +2922,7 @@
         const halfPick = rec.halfPick;
         const handicap = rec.handicap;
         const totalPick = rec.totalPick;
+        const scores = rec.scores;
         return `
           <div class="pick-row">
             <div class="timeblock">
@@ -2877,8 +2940,8 @@
               <div class="core-picks">
                 <div class="core-pick">
                   <div class="core-label">比分推荐</div>
-                  <div class="core-value">${model.score}</div>
-                  <div class="core-detail">备选 ${model.altScore} / ${model.thirdScore}</div>
+                  <div class="core-value">${scores.primaryText}</div>
+                  <div class="core-detail">备选 ${scores.secondaryText} / ${scores.tertiaryText}</div>
                 </div>
                 <div class="core-pick">
                   <div class="core-label">胜平负推荐</div>
@@ -2908,8 +2971,8 @@
             </div>
             <div class="score-stack">
               <span class="small muted">推荐比分</span>
-              <strong>${model.score}</strong>
-              <span class="small">备选 ${model.altScore} / ${model.thirdScore}</span>
+              <strong>${scores.primaryText}</strong>
+              <span class="small">备选 ${scores.secondaryText} / ${scores.tertiaryText}</span>
               <span class="small">公允 ${odds(pick.p, cfg.margin)}</span>
             </div>
           </div>
@@ -2954,8 +3017,10 @@
     function collectVerifyRows(cfg) {
       return buildFixtures().filter(fixture => fixture.known).map(fixture => {
         const model = matchModel(fixture.teamA, fixture.teamB, cfg, null, contextForFixture(fixture, cfg));
+        const recommendedOutcome = recommendationOutcomePick(model);
+        const recommendedScores = recommendedScorePack(model, recommendedOutcome.key);
         const actual = scoreText(fixture.known);
-        const predictedOutcome = modelOutcome(model);
+        const predictedOutcome = recommendedOutcome.label;
         const actualOutcome = scoreOutcome(fixture.known);
         const actualOver25 = fixture.known[0] + fixture.known[1] >= 3;
         const modelOver25 = model.over25 >= 0.5;
@@ -2969,12 +3034,14 @@
           actualRank,
           actualProb: scoreProbabilityByText(model, actual),
           outcomeHit: predictedOutcome === actualOutcome,
-          exactHit: model.score === actual,
-          top2Hit: model.score === actual || model.altScore === actual,
-          top3Hit: model.score === actual || model.altScore === actual || model.thirdScore === actual,
+          exactHit: recommendedScores.primaryText === actual,
+          top2Hit: recommendedScores.primaryText === actual || recommendedScores.secondaryText === actual,
+          top3Hit: recommendedScores.primaryText === actual || recommendedScores.secondaryText === actual || recommendedScores.tertiaryText === actual,
           overHit: modelOver25 === actualOver25,
           bttsHit: modelBtts === actualBtts,
           predictedOutcome,
+          recommendedOutcome,
+          recommendedScores,
           actualOutcome,
           modelOver25,
           actualOver25,
@@ -3009,7 +3076,7 @@
       const top3Hits = reviewRows.filter(row => row.top3Hit).length;
       const outcomeHits = reviewRows.filter(row => row.outcomeHit).length;
       const overHits = reviewRows.filter(row => row.overHit).length;
-      const avgGap = reviewRows.reduce((sum, row) => sum + scoreGap(row.actual, row.model.score), 0) / reviewRows.length;
+      const avgGap = reviewRows.reduce((sum, row) => sum + scoreGap(row.actual, row.recommendedScores.primaryText), 0) / reviewRows.length;
       if (meta) {
         meta.textContent = `${formatDay(day.date)} ${reviewRows.length}场｜前3比分 ${top3Hits}/${reviewRows.length}｜均差 ${avgGap.toFixed(1)}球`;
       }
@@ -3022,7 +3089,7 @@
           <div class="kpi"><div class="label">比分均差</div><div class="value">${avgGap.toFixed(1)}球</div><div class="hint">按概率第1比分算</div></div>
         </div>
         ${reviewRows.map(row => {
-          const gap = scoreGap(row.actual, row.model.score);
+          const gap = scoreGap(row.actual, row.recommendedScores.primaryText);
           const stateClass = row.top3Hit ? "hit" : "miss";
           const stateText = row.top3Hit ? "前3命中" : "前3未中";
           return `
@@ -3033,8 +3100,8 @@
                 <div class="${row.top3Hit ? "hit-text" : "miss-text"}">${stateText}</div>
               </div>
               <div>
-                <div><strong>真实 ${row.actual}</strong>｜预测第1 ${row.model.score}｜差距 ${gap}球</div>
-                <div class="small muted">前三：${row.model.score} / ${row.model.altScore} / ${row.model.thirdScore}；真实排名 ${row.actualRank ? `第${row.actualRank}` : "10球外"}</div>
+                <div><strong>真实 ${row.actual}</strong>｜预测第1 ${row.recommendedScores.primaryText}｜差距 ${gap}球</div>
+                <div class="small muted">前三：${row.recommendedScores.primaryText} / ${row.recommendedScores.secondaryText} / ${row.recommendedScores.tertiaryText}；真实排名 ${row.actualRank ? `第${row.actualRank}` : "10球外"}</div>
                 <div class="small muted">胜平负 ${row.outcomeHit ? "<span class='hit-text'>命中</span>" : "<span class='miss-text'>未中</span>"}｜大小2.5 ${row.overHit ? "<span class='hit-text'>命中</span>" : "<span class='miss-text'>未中</span>"}｜双方进球 ${row.bttsHit ? "<span class='hit-text'>命中</span>" : "<span class='miss-text'>未中</span>"}</div>
               </div>
             </div>
@@ -3064,7 +3131,7 @@
           ? "实际进球低于模型期望，后续预测会收紧总进球区间。"
           : "实际进球与模型期望接近，暂不大幅调整总进球基准。";
       const missLine = recentMiss
-        ? `最近漏点是 ${teamLabel(recentMiss.fixture.teamA)} ${recentMiss.actual} ${teamLabel(recentMiss.fixture.teamB)}，模型第1 ${recentMiss.model.score}，真实比分排${recentMiss.actualRank ? `第${recentMiss.actualRank}` : "10球外"}。`
+        ? `最近漏点是 ${teamLabel(recentMiss.fixture.teamA)} ${recentMiss.actual} ${teamLabel(recentMiss.fixture.teamB)}，模型第1 ${recentMiss.recommendedScores.primaryText}，真实比分排${recentMiss.actualRank ? `第${recentMiss.actualRank}` : "10球外"}。`
         : "最近复盘暂无前3比分漏点。";
 
       container.innerHTML = `
@@ -3384,22 +3451,22 @@
         const groupCount = Math.max(group.rows.length, 1);
         const groupTop3 = group.rows.filter(row => row.top3Hit).length;
         const groupOutcome = group.rows.filter(row => row.outcomeHit).length;
-        const groupAvgGap = group.rows.reduce((sum, row) => sum + scoreGap(row.actual, row.model.score), 0) / groupCount;
+        const groupAvgGap = group.rows.reduce((sum, row) => sum + scoreGap(row.actual, row.recommendedScores.primaryText), 0) / groupCount;
         const groupHeader = `
           <tr class="verify-day-row">
             <td colspan="14">北京时间 ${formatDay(group.date)}｜${group.rows.length}场｜前3比分 ${groupTop3}/${group.rows.length}｜胜平负 ${groupOutcome}/${group.rows.length}｜第1比分均差 ${groupAvgGap.toFixed(1)}球</td>
           </tr>
         `;
         const body = group.rows.map(row => {
-          const gap = scoreGap(row.actual, row.model.score);
+          const gap = scoreGap(row.actual, row.recommendedScores.primaryText);
           return `
             <tr class="${row.top3Hit ? "verify-result-hit" : "verify-result-miss"}">
               <td>${teamLabel(row.fixture.teamA)} 对 ${teamLabel(row.fixture.teamB)}<br><span class="small muted">${row.fixture.group}组 第${row.fixture.id.split("-")[1]}场</span></td>
               <td class="num">${formatBeijingClock(row.fixture)}</td>
               <td class="num"><strong>${row.actual}</strong></td>
-              <td class="num">${row.model.score}</td>
-              <td class="num">${row.model.altScore}</td>
-              <td class="num">${row.model.thirdScore}</td>
+              <td class="num">${row.recommendedScores.primaryText}</td>
+              <td class="num">${row.recommendedScores.secondaryText}</td>
+              <td class="num">${row.recommendedScores.tertiaryText}</td>
               <td class="num">${gap}球</td>
               <td class="num">${row.actualRank ? `第${row.actualRank}<br><span class="small muted">${pct(row.actualProb)}</span>` : "10球外"}</td>
               <td class="num">${hitMark(row.outcomeHit)}<br><span class="small muted">预测${row.predictedOutcome} / 实际${row.actualOutcome}</span></td>
@@ -3421,30 +3488,32 @@
       const teamB = fixture.teamB;
       const context = contextForFixture(fixture, cfg);
       const model = matchModel(teamA, teamB, cfg, null, context);
+      const pick = recommendationOutcomePick(model);
+      const scorePack = recommendedScorePack(model, pick.key);
       const events = eventForecast(teamA, teamB, cfg, context);
       const knownScore = cfg.useKnown && fixture.known ? `${fixture.known[0]}-${fixture.known[1]}` : null;
-      const primaryScore = knownScore || model.score;
+      const primaryScore = knownScore || scorePack.primaryText;
       const primaryLabel = knownScore ? "已赛比分" : "概率第1";
       const path = bestScorePath(model, primaryScore);
       return `
         <div class="match-card">
           <h3>${title}｜${teamLabel(teamA)} 对 ${teamLabel(teamB)}</h3>
-          <div class="small muted">${fixture.group}组｜期望进球 ${model.lambdaA.toFixed(2)} - ${model.lambdaB.toFixed(2)}｜节奏判断：${events.tension}</div>
+          <div class="small muted">${fixture.group}组｜期望进球 ${model.lambdaA.toFixed(2)} - ${model.lambdaB.toFixed(2)}｜节奏判断：${events.tension}｜胜平负建议：${pick.label}</div>
           <div class="score-options">
             <div class="score-option">
               <span class="muted small">${knownScore ? primaryLabel : "概率第1"}</span>
-              <strong>${knownScore ? primaryScore : model.score}</strong>
-              <span class="small muted">${knownScore ? "模型仍给出赛前分布" : `命中概率约 ${pct(model.scoreProb)}`}</span>
+              <strong>${knownScore ? primaryScore : scorePack.primaryText}</strong>
+              <span class="small muted">${knownScore ? "模型仍给出赛前分布" : `命中概率约 ${pct(scorePack.primaryProb)}`}</span>
             </div>
             <div class="score-option">
               <span class="muted small">概率第2</span>
-              <strong>${model.altScore}</strong>
-              <span class="small muted">命中概率约 ${pct(model.altScoreProb)}</span>
+              <strong>${scorePack.secondaryText}</strong>
+              <span class="small muted">命中概率约 ${pct(scorePack.secondaryProb)}</span>
             </div>
             <div class="score-option">
               <span class="muted small">概率第3</span>
-              <strong>${model.thirdScore}</strong>
-              <span class="small muted">命中概率约 ${pct(model.thirdScoreProb)}</span>
+              <strong>${scorePack.tertiaryText}</strong>
+              <span class="small muted">命中概率约 ${pct(scorePack.tertiaryProb)}</span>
             </div>
           </div>
           <div class="table-wrap" style="margin-top:10px">
@@ -3472,7 +3541,7 @@
                 <tr><th>项目</th><th>上半场预测</th><th>下半场预测</th><th>备注</th></tr>
               </thead>
               <tbody>
-                <tr><td>比分</td><td>${path.half}</td><td>${path.second}（下半场进球）</td><td>全场概率第1 ${primaryScore}，概率第2 ${model.altScore}</td></tr>
+                <tr><td>比分</td><td>${path.half}</td><td>${path.second}（下半场进球）</td><td>全场建议 ${primaryScore}，备选 ${scorePack.secondaryText}</td></tr>
                 <tr><td>黄牌</td><td>${rangeText(events.first.yellow, "张")}</td><td>${rangeText(events.second.yellow, "张")}</td><td>下半场更容易升温</td></tr>
                 <tr><td>红牌</td><td>${pct(events.first.red)}</td><td>${pct(events.second.red)}</td><td>全场红牌概率约 ${pct(events.redProb)}</td></tr>
                 <tr><td>越位</td><td>${rangeText(events.first.offside, "次", 0.65)}</td><td>${rangeText(events.second.offside, "次", 0.65)}</td><td>领先方回收时会降低</td></tr>
