@@ -2284,20 +2284,35 @@
       }
     }
 
-    function knownFormStats(beforeOrder = Infinity) {
+    function resultMetaOrder(id) {
+      const meta = knownResultMeta[id] || {};
+      return Number.isFinite(Number(meta.order)) ? Number(meta.order) : Infinity;
+    }
+
+    function resultKickoffTime(id) {
+      const meta = fixtureScheduleMeta[id] || {};
+      const date = meta.dateObject || parseLocalMatchDate(meta.localDate || knownResultMeta[id]?.date || "");
+      return date && !Number.isNaN(date.getTime()) ? date.getTime() : null;
+    }
+
+    function resultIsBefore(id, beforeOrder = Infinity, beforeTime = null) {
+      const matchTime = resultKickoffTime(id);
+      if (Number.isFinite(beforeTime) && matchTime !== null) return matchTime < beforeTime;
+      return resultMetaOrder(id) < beforeOrder;
+    }
+
+    function knownFormStats(beforeOrder = Infinity, beforeTime = null) {
       const stats = blankFormStats();
       scheduledFixtures().forEach(fixture => {
         const score = knownResults[fixture.id];
         if (!score) return;
-        const meta = knownResultMeta[fixture.id] || {};
-        const order = Number.isFinite(Number(meta.order)) ? Number(meta.order) : Infinity;
-        if (order >= beforeOrder) return;
+        if (!resultIsBefore(fixture.id, beforeOrder, beforeTime)) return;
         addFormResult(stats, fixture.teamA, fixture.teamB, score[0], score[1]);
       });
       return stats;
     }
 
-    function tournamentClimateContext(beforeOrder = Infinity, cfg = config()) {
+    function tournamentClimateContext(beforeOrder = Infinity, cfg = config(), beforeTime = null) {
       const weight = clamp(cfg.climateWeight ?? 0, 0, 1);
       if (weight <= 0) return {};
 
@@ -2310,9 +2325,7 @@
       scheduledFixtures().forEach(fixture => {
         const score = knownResults[fixture.id];
         if (!score) return;
-        const meta = knownResultMeta[fixture.id] || {};
-        const order = Number.isFinite(Number(meta.order)) ? Number(meta.order) : Infinity;
-        if (order >= beforeOrder) return;
+        if (!resultIsBefore(fixture.id, beforeOrder, beforeTime)) return;
         matches += 1;
         const total = score[0] + score[1];
         goals += total;
@@ -2448,12 +2461,13 @@
       const beforeOrder = fixture.known
         ? (Number.isFinite(Number(knownResultMeta[fixture.id]?.order)) ? Number(knownResultMeta[fixture.id].order) : Infinity)
         : Infinity;
-      const formContext = cfg.useKnown ? formContextFromStats(fixture.teamA, fixture.teamB, knownFormStats(beforeOrder), cfg) : {};
+      const beforeTime = fixtureDate(fixture)?.getTime() ?? null;
+      const formContext = cfg.useKnown ? formContextFromStats(fixture.teamA, fixture.teamB, knownFormStats(beforeOrder, beforeTime), cfg) : {};
       const historyContext = historyContextForMatch(fixture.teamA, fixture.teamB, cfg, "GROUP");
       const motivationContext = qualificationContext(fixture, cfg);
       const baseContext = combineContexts(formContext, historyContext, motivationContext, { stage: "GROUP" });
       return combineContexts(
-        tournamentClimateContext(beforeOrder, cfg),
+        tournamentClimateContext(beforeOrder, cfg, beforeTime),
         baseContext,
         matchupScoreContext(fixture.teamA, fixture.teamB, cfg, null, baseContext),
         { market: marketLineForFixture(fixture) }
@@ -2665,14 +2679,13 @@
       const beforeOrder = fixture.known
         ? (Number.isFinite(Number(knownResultMeta[fixture.id]?.order)) ? Number(knownResultMeta[fixture.id].order) : Infinity)
         : Infinity;
+      const beforeTime = fixtureDate(fixture)?.getTime() ?? null;
       scheduledFixtures()
         .filter(other => other.group === fixture.group && other.id !== fixture.id)
         .forEach(other => {
           const score = knownResults[other.id];
           if (!score) return;
-          const meta = knownResultMeta[other.id] || {};
-          const order = Number.isFinite(Number(meta.order)) ? Number(meta.order) : Infinity;
-          if (order >= beforeOrder) return;
+          if (!resultIsBefore(other.id, beforeOrder, beforeTime)) return;
           addResult(table, other.teamA, other.teamB, score[0], score[1], results);
         });
       return { table, results, ranked: rankTeams(Object.values(table), results) };
@@ -3109,21 +3122,19 @@
       };
     }
 
-    function teamFormLine(name, beforeOrder, cfg) {
+    function teamFormLine(name, beforeOrder, cfg, beforeTime = null) {
       if (!cfg.useKnown) return `${teamLabel(name)}未纳入已赛状态`;
-      const stats = knownFormStats(beforeOrder)[name] || { played: 0, gf: 0, ga: 0, pts: 0 };
+      const stats = knownFormStats(beforeOrder, beforeTime)[name] || { played: 0, gf: 0, ga: 0, pts: 0 };
       if (!stats.played) return `${teamLabel(name)}本届样本不足`;
       return `${teamLabel(name)}本届${stats.played}场 ${stats.gf}-${stats.ga}，${stats.pts}分`;
     }
 
-    function tournamentClimateLine(beforeOrder = Infinity) {
+    function tournamentClimateLine(beforeOrder = Infinity, beforeTime = null) {
       const rows = [];
       scheduledFixtures().forEach(fixture => {
         const score = knownResults[fixture.id];
         if (!score) return;
-        const meta = knownResultMeta[fixture.id] || {};
-        const order = Number.isFinite(Number(meta.order)) ? Number(meta.order) : Infinity;
-        if (order >= beforeOrder) return;
+        if (!resultIsBefore(fixture.id, beforeOrder, beforeTime)) return;
         rows.push(score);
       });
       if (!rows.length) return "本届走势：已赛样本不足，暂以赛前长期均值为主";
@@ -3224,6 +3235,7 @@
       const beforeOrder = fixture.known
         ? (Number.isFinite(Number(knownResultMeta[fixture.id]?.order)) ? Number(knownResultMeta[fixture.id].order) : Infinity)
         : Infinity;
+      const beforeTime = fixtureDate(fixture)?.getTime() ?? null;
       const profileA = teamProfile(fixture.teamA);
       const profileB = teamProfile(fixture.teamB);
       const eloDiff = TEAMS[fixture.teamA].elo - TEAMS[fixture.teamB].elo + (HOSTS.has(fixture.teamA) ? cfg.hostBoost : 0) - (HOSTS.has(fixture.teamB) ? cfg.hostBoost : 0);
@@ -3232,8 +3244,8 @@
       const logic = [
         `客观：Elo差 ${Math.round(eloDiff)}，历史强弱与大赛稳定性已校准，模型给${pick.label} ${pct(pick.p)}，联动比分 ${scores.primaryText} / ${scores.secondaryText} / ${scores.tertiaryText}`,
         situation.main,
-        tournamentClimateLine(beforeOrder),
-        `状态：${teamFormLine(fixture.teamA, beforeOrder, cfg)}；${teamFormLine(fixture.teamB, beforeOrder, cfg)}`,
+        tournamentClimateLine(beforeOrder, beforeTime),
+        `状态：${teamFormLine(fixture.teamA, beforeOrder, cfg, beforeTime)}；${teamFormLine(fixture.teamB, beforeOrder, cfg, beforeTime)}`,
         `球员/风格：${teamLabel(fixture.teamA)}看 ${profileA.players}；${teamLabel(fixture.teamB)}看 ${profileB.players}；${profileA.style} 对 ${profileB.style}`,
         `事件倾向：${events.tension}，下半场黄牌${rangeText(events.second.yellow, "张")}，越位${rangeText(events.first.offside + events.second.offside, "次", 0.8)}`,
         `主观：${model.highGoals > 0.38 ? "本届大比分偏多，防4球以上" : "节奏偏常规"}；${favoriteNotWin > 0.40 ? "热门不胜风险偏高" : "方向相对集中"}`
@@ -3659,7 +3671,8 @@
       const beforeOrder = fixture.known
         ? (Number.isFinite(Number(knownResultMeta[fixture.id]?.order)) ? Number(knownResultMeta[fixture.id].order) : Infinity)
         : Infinity;
-      const stats = knownFormStats(beforeOrder);
+      const beforeTime = fixtureDate(fixture)?.getTime() ?? null;
+      const stats = knownFormStats(beforeOrder, beforeTime);
       const a = stats[fixture.teamA] || { played: 0, gf: 0, ga: 0, pts: 0 };
       const b = stats[fixture.teamB] || { played: 0, gf: 0, ga: 0, pts: 0 };
       return `${teamLabel(fixture.teamA)} ${a.played}场 ${a.gf}-${a.ga} ${a.pts}分<br><span class="small muted">${teamLabel(fixture.teamB)} ${b.played}场 ${b.gf}-${b.ga} ${b.pts}分</span>`;
