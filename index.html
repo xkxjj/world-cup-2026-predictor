@@ -741,14 +741,21 @@
 
     .pick-row {
       display: grid;
-      grid-template-columns: minmax(132px, 0.7fr) minmax(0, 1fr) minmax(128px, 0.65fr);
+      grid-template-columns: minmax(132px, 0.52fr) minmax(0, 1fr);
       gap: 12px;
       align-items: start;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(130, 173, 153, 0.18);
+      padding: 14px;
+      border: 1px solid rgba(130, 173, 153, 0.22);
+      border-radius: 10px;
+      background:
+        linear-gradient(135deg, rgba(34, 197, 160, 0.08), rgba(88, 199, 232, 0.04)),
+        rgba(4, 14, 12, 0.64);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
     }
 
-    .pick-row:last-child { border-bottom: 0; }
+    .pick-row.pick-home { border-left: 3px solid var(--green); }
+    .pick-row.pick-away { border-left: 3px solid var(--blue); }
+    .pick-row.pick-draw { border-left: 3px solid var(--amber); }
 
     .timeblock {
       display: grid;
@@ -769,7 +776,8 @@
       align-items: center;
       color: #ffffff;
       font-weight: 800;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      font-size: 16px;
     }
 
     .pick-badge {
@@ -829,6 +837,88 @@
       color: #cfe2d9;
       font-size: 12px;
       line-height: 1.35;
+    }
+
+    .decision-strip {
+      display: grid;
+      grid-template-columns: minmax(150px, 0.72fr) minmax(180px, 1fr) minmax(180px, 1fr);
+      gap: 10px;
+      margin: 8px 0 10px;
+    }
+
+    .decision-card {
+      min-height: 104px;
+      border: 1px solid rgba(108, 223, 194, 0.24);
+      border-radius: 10px;
+      padding: 12px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025)),
+        rgba(5, 18, 15, 0.82);
+    }
+
+    .decision-card.primary {
+      background:
+        radial-gradient(circle at top right, rgba(78, 231, 196, 0.18), transparent 42%),
+        linear-gradient(180deg, rgba(42, 117, 96, 0.72), rgba(8, 31, 26, 0.90));
+    }
+
+    .decision-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .decision-value {
+      color: #ffffff;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .score-pair {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .score-pair strong {
+      color: #ffffff;
+      font-size: 30px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .score-pair span {
+      color: #cfe2d9;
+      font-size: 12px;
+    }
+
+    .situation-lines {
+      display: grid;
+      gap: 5px;
+      color: #d9eee5;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .situation-lines b {
+      color: #ffffff;
+    }
+
+    .model-tag {
+      display: inline-flex;
+      align-items: center;
+      width: max-content;
+      max-width: 100%;
+      border-radius: 999px;
+      border: 1px solid rgba(78, 231, 196, 0.22);
+      background: rgba(78, 231, 196, 0.08);
+      color: #d7fff3;
+      padding: 3px 8px;
+      font-size: 12px;
+      margin-top: 8px;
     }
 
     .mini-chip {
@@ -929,6 +1019,7 @@
     @media (max-width: 900px) {
       .dashboard { grid-template-columns: 1fr; }
       .pick-row { grid-template-columns: 1fr; }
+      .decision-strip { grid-template-columns: 1fr; }
       .core-picks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .review-row { grid-template-columns: 1fr; }
       .score-stack { text-align: left; }
@@ -1430,6 +1521,7 @@
       "cote d ivoire": "ivory coast",
       "czechia": "czech republic",
       "democratic republic of congo": "dr congo",
+      "democratic republic of the congo": "dr congo",
       "d r congo": "dr congo",
       "korea republic": "south korea",
       "republic of korea": "south korea",
@@ -1499,6 +1591,41 @@
       bttsRate: 0.66,
       drawRate: 0.36,
       highRate: 0.38
+    };
+    const TEAM_HISTORY_PRIORS = {
+      "Argentina": { pedigree: 0.98, knockout: 0.95, stability: 0.88, volatility: 0.35 },
+      "France": { pedigree: 0.96, knockout: 0.93, stability: 0.84, volatility: 0.38 },
+      "Spain": { pedigree: 0.94, knockout: 0.88, stability: 0.82, volatility: 0.34 },
+      "Brazil": { pedigree: 0.93, knockout: 0.88, stability: 0.78, volatility: 0.44 },
+      "Germany": { pedigree: 0.92, knockout: 0.90, stability: 0.80, volatility: 0.40 },
+      "Portugal": { pedigree: 0.90, knockout: 0.86, stability: 0.78, volatility: 0.42 },
+      "England": { pedigree: 0.89, knockout: 0.84, stability: 0.80, volatility: 0.38 },
+      "Netherlands": { pedigree: 0.86, knockout: 0.82, stability: 0.77, volatility: 0.42 },
+      "Croatia": { pedigree: 0.84, knockout: 0.88, stability: 0.79, volatility: 0.35 },
+      "Uruguay": { pedigree: 0.82, knockout: 0.80, stability: 0.74, volatility: 0.47 },
+      "Belgium": { pedigree: 0.80, knockout: 0.74, stability: 0.70, volatility: 0.50 },
+      "Colombia": { pedigree: 0.78, knockout: 0.74, stability: 0.70, volatility: 0.48 },
+      "Switzerland": { pedigree: 0.73, knockout: 0.72, stability: 0.78, volatility: 0.34 },
+      "Mexico": { pedigree: 0.72, knockout: 0.70, stability: 0.73, volatility: 0.40 },
+      "United States": { pedigree: 0.68, knockout: 0.66, stability: 0.66, volatility: 0.52 },
+      "Japan": { pedigree: 0.68, knockout: 0.68, stability: 0.74, volatility: 0.38 },
+      "Morocco": { pedigree: 0.70, knockout: 0.76, stability: 0.76, volatility: 0.39 },
+      "Senegal": { pedigree: 0.67, knockout: 0.67, stability: 0.68, volatility: 0.50 },
+      "South Korea": { pedigree: 0.63, knockout: 0.66, stability: 0.66, volatility: 0.47 },
+      "Australia": { pedigree: 0.60, knockout: 0.62, stability: 0.65, volatility: 0.50 },
+      "Ecuador": { pedigree: 0.60, knockout: 0.58, stability: 0.67, volatility: 0.45 },
+      "Ivory Coast": { pedigree: 0.56, knockout: 0.55, stability: 0.55, volatility: 0.60 },
+      "Turkey": { pedigree: 0.67, knockout: 0.63, stability: 0.61, volatility: 0.58 },
+      "Austria": { pedigree: 0.62, knockout: 0.60, stability: 0.67, volatility: 0.45 },
+      "Norway": { pedigree: 0.61, knockout: 0.55, stability: 0.58, volatility: 0.56 },
+      "Sweden": { pedigree: 0.62, knockout: 0.65, stability: 0.70, volatility: 0.42 },
+      "Czech Republic": { pedigree: 0.58, knockout: 0.58, stability: 0.66, volatility: 0.43 },
+      "Paraguay": { pedigree: 0.57, knockout: 0.58, stability: 0.67, volatility: 0.46 },
+      "Canada": { pedigree: 0.52, knockout: 0.50, stability: 0.54, volatility: 0.58 },
+      "Qatar": { pedigree: 0.43, knockout: 0.40, stability: 0.50, volatility: 0.58 },
+      "South Africa": { pedigree: 0.44, knockout: 0.42, stability: 0.48, volatility: 0.58 },
+      "Curacao": { pedigree: 0.30, knockout: 0.28, stability: 0.36, volatility: 0.66 },
+      "New Zealand": { pedigree: 0.35, knockout: 0.34, stability: 0.46, volatility: 0.60 }
     };
     let knownResultMeta = {
       "A-1": { order: 1 },
@@ -1799,6 +1926,52 @@
       return currentElo(name, state) + (HOSTS.has(name) ? cfg.hostBoost : 0) + sideAdjust;
     }
 
+    function historyProfile(name) {
+      const team = TEAMS[name] || { elo: BASE_ELO_MEAN };
+      const eloNorm = clamp((team.elo - 1650) / 520, -0.45, 1);
+      const prior = TEAM_HISTORY_PRIORS[name] || {};
+      return {
+        pedigree: prior.pedigree ?? clamp(0.44 + eloNorm * 0.42, 0.22, 0.92),
+        knockout: prior.knockout ?? clamp(0.42 + eloNorm * 0.36, 0.24, 0.88),
+        stability: prior.stability ?? clamp(0.52 + eloNorm * 0.24, 0.34, 0.82),
+        volatility: prior.volatility ?? clamp(0.54 - eloNorm * 0.10, 0.34, 0.68)
+      };
+    }
+
+    function stageWeight(stage = "GROUP") {
+      const key = String(stage || "GROUP").toUpperCase();
+      if (key === "FINAL") return 1.25;
+      if (key === "SF") return 1.15;
+      if (key === "QF") return 1.05;
+      if (key === "R16") return 0.96;
+      if (key === "R32") return 0.88;
+      return 0.55;
+    }
+
+    function historyContextForMatch(teamA, teamB, cfg, stage = "GROUP") {
+      const a = historyProfile(teamA);
+      const b = historyProfile(teamB);
+      const w = stageWeight(stage);
+      const pedigreeDiff = a.pedigree - b.pedigree;
+      const knockoutDiff = a.knockout - b.knockout;
+      const stabilityAvg = (a.stability + b.stability) / 2;
+      const volatilityAvg = (a.volatility + b.volatility) / 2;
+      const stageIsGroup = String(stage || "GROUP").toUpperCase() === "GROUP";
+      const historyPower = stageIsGroup ? 34 : 58;
+
+      return {
+        eloA: (pedigreeDiff * historyPower + knockoutDiff * 20 * w),
+        eloB: -(pedigreeDiff * historyPower + knockoutDiff * 20 * w),
+        pace: stageIsGroup
+          ? clamp(1 + (volatilityAvg - 0.50) * 0.06, 0.97, 1.04)
+          : clamp(0.97 - stabilityAvg * 0.035 + volatilityAvg * 0.025, 0.91, 1.01),
+        lowTotalBias: stageIsGroup ? 1 : clamp(1.03 + stabilityAvg * 0.10, 1.04, 1.14),
+        drawBias: stageIsGroup ? 1 : clamp(1.03 + stabilityAvg * 0.07, 1.03, 1.12),
+        tailBoost: stageIsGroup ? clamp(1 + (volatilityAvg - 0.50) * 0.08, 0.96, 1.05) : 0.94,
+        favoriteTail: stageIsGroup ? 1 : 0.94
+      };
+    }
+
     function lambdas(teamA, teamB, cfg, state = null, context = {}) {
       const eloA = effectiveElo(teamA, cfg, state, context.eloA || 0);
       const eloB = effectiveElo(teamB, cfg, state, context.eloB || 0);
@@ -1935,8 +2108,9 @@
       const lowTotalBias = clamp(context.lowTotalBias || 1, 0.70, 1.35);
       const favoriteSide = context.favoriteSide || null;
       const favoriteTail = clamp(context.favoriteTail || 1, 0.85, 1.45);
+      const outcomeBias = context.outcomeBias || null;
 
-      if (variance <= 0 && tailBoost === 1 && bttsBias === 1 && drawBias === 1 && lowTotalBias === 1 && favoriteTail === 1) {
+      if (variance <= 0 && tailBoost === 1 && bttsBias === 1 && drawBias === 1 && lowTotalBias === 1 && favoriteTail === 1 && !outcomeBias) {
         return distribution;
       }
 
@@ -1947,6 +2121,7 @@
         if (total <= 1) factor *= lowTotalBias;
         if (score.a > 0 && score.b > 0) factor *= bttsBias;
         if (score.a === score.b) factor *= drawBias;
+        if (outcomeBias) factor *= outcomeBias[scoreOutcomeKey(score)] || 1;
         if (favoriteSide === "A" && score.a > score.b && total >= 3) {
           factor *= Math.pow(favoriteTail, Math.min(score.a - score.b, 4) * 0.35);
         }
@@ -2052,7 +2227,11 @@
         (context.drawBias || 1).toFixed(2),
         (context.lowTotalBias || 1).toFixed(2),
         (context.favoriteTail || 1).toFixed(2),
+        (context.outcomeBias?.home || 1).toFixed(2),
+        (context.outcomeBias?.draw || 1).toFixed(2),
+        (context.outcomeBias?.away || 1).toFixed(2),
         context.favoriteSide || "",
+        context.stage || "",
         cfg.useMarket ? cfg.marketWeight.toFixed(2) : "0",
         marketSignature(context.market)
       ].join("|");
@@ -2069,6 +2248,7 @@
       const full = applyMarketCalibration(calibrated, context.market, cfg);
       return {
         ...full,
+        context,
         half: scoreDistribution(lambdaA * 0.44, lambdaB * 0.44, 6, cfg, context),
         secondHalf: scoreDistribution(lambdaA * 0.56, lambdaB * 0.56, 6, cfg, context)
       };
@@ -2215,6 +2395,10 @@
         drawBias: 1,
         lowTotalBias: 1,
         favoriteTail: 1
+        ,
+        outcomeBias: { home: 1, draw: 1, away: 1 },
+        tags: [],
+        notes: []
       };
       contexts.filter(Boolean).forEach(context => {
         combined.eloA += context.eloA || 0;
@@ -2230,8 +2414,16 @@
         combined.drawBias *= context.drawBias || 1;
         combined.lowTotalBias *= context.lowTotalBias || 1;
         combined.favoriteTail *= context.favoriteTail || 1;
+        if (context.outcomeBias) {
+          combined.outcomeBias.home *= context.outcomeBias.home || 1;
+          combined.outcomeBias.draw *= context.outcomeBias.draw || 1;
+          combined.outcomeBias.away *= context.outcomeBias.away || 1;
+        }
         if (context.favoriteSide) combined.favoriteSide = context.favoriteSide;
         if (context.market) combined.market = context.market;
+        if (context.stage) combined.stage = context.stage;
+        if (context.tags) combined.tags.push(...context.tags);
+        if (context.notes) combined.notes.push(...context.notes);
       });
       combined.pace = clamp(combined.pace, 0.72, 1.22);
       combined.dcShift = clamp(combined.dcShift, -0.20, 0.20);
@@ -2240,6 +2432,11 @@
       combined.drawBias = clamp(combined.drawBias, 0.70, 1.45);
       combined.lowTotalBias = clamp(combined.lowTotalBias, 0.70, 1.35);
       combined.favoriteTail = clamp(combined.favoriteTail, 0.85, 1.45);
+      combined.outcomeBias.home = clamp(combined.outcomeBias.home, 0.70, 1.35);
+      combined.outcomeBias.draw = clamp(combined.outcomeBias.draw, 0.70, 1.35);
+      combined.outcomeBias.away = clamp(combined.outcomeBias.away, 0.70, 1.35);
+      combined.tags = [...new Set(combined.tags)].slice(0, 5);
+      combined.notes = [...new Set(combined.notes)].slice(0, 4);
       return combined;
     }
 
@@ -2252,10 +2449,13 @@
         ? (Number.isFinite(Number(knownResultMeta[fixture.id]?.order)) ? Number(knownResultMeta[fixture.id].order) : Infinity)
         : Infinity;
       const formContext = cfg.useKnown ? formContextFromStats(fixture.teamA, fixture.teamB, knownFormStats(beforeOrder), cfg) : {};
+      const historyContext = historyContextForMatch(fixture.teamA, fixture.teamB, cfg, "GROUP");
+      const motivationContext = qualificationContext(fixture, cfg);
+      const baseContext = combineContexts(formContext, historyContext, motivationContext, { stage: "GROUP" });
       return combineContexts(
         tournamentClimateContext(beforeOrder, cfg),
-        matchupScoreContext(fixture.teamA, fixture.teamB, cfg, null, formContext),
-        formContext,
+        baseContext,
+        matchupScoreContext(fixture.teamA, fixture.teamB, cfg, null, baseContext),
         { market: marketLineForFixture(fixture) }
       );
     }
@@ -2290,18 +2490,43 @@
       state.elo[teamB] -= delta;
     }
 
-    function knockoutWinner(teamA, teamB, cfg, rand, state = null) {
+    function knockoutStageContext(teamA, teamB, cfg, state = null, stage = "R32") {
+      const eloA = currentElo(teamA, state) + (HOSTS.has(teamA) ? cfg.hostBoost : 0);
+      const eloB = currentElo(teamB, state) + (HOSTS.has(teamB) ? cfg.hostBoost : 0);
+      const gap = Math.abs(eloA - eloB);
+      const side = eloA >= eloB ? "A" : "B";
+      const control = stageWeight(stage);
+      const favoriteLift = clamp((gap - 80) / 360, 0, 1) * 34 * control;
+      return {
+        stage,
+        eloA: side === "A" ? favoriteLift : -favoriteLift,
+        eloB: side === "B" ? favoriteLift : -favoriteLift,
+        pace: clamp(0.96 - control * 0.035, 0.88, 0.98),
+        drawBias: clamp(1.04 + control * 0.05, 1.04, 1.13),
+        lowTotalBias: clamp(1.05 + control * 0.07, 1.06, 1.16),
+        tailBoost: clamp(0.96 - control * 0.035, 0.88, 0.97),
+        favoriteTail: clamp(0.98 - control * 0.025, 0.90, 0.98),
+        favoriteSide: side,
+        tags: ["淘汰赛稳态", gap >= 140 ? "冷门抑制" : "谨慎试探"],
+        notes: [`淘汰赛：${gap >= 140 ? "强弱更清晰，降低随机爆冷" : "90分钟更谨慎，点球仍有不确定"}`]
+      };
+    }
+
+    function knockoutWinner(teamA, teamB, cfg, rand, state = null, stage = "R32") {
       const context = combineContexts(
         tournamentClimateContext(Infinity, cfg),
-        matchupScoreContext(teamA, teamB, cfg, state)
+        historyContextForMatch(teamA, teamB, cfg, stage),
+        knockoutStageContext(teamA, teamB, cfg, state, stage),
+        matchupScoreContext(teamA, teamB, cfg, state, combineContexts(historyContextForMatch(teamA, teamB, cfg, stage), knockoutStageContext(teamA, teamB, cfg, state, stage)))
       );
       const [aScore, bScore] = simScore(teamA, teamB, cfg, rand, state, context);
       updateDynamicElo(state, teamA, teamB, aScore, bScore, cfg, context);
       if (aScore > bScore) return teamA;
       if (bScore > aScore) return teamB;
       const raw = eloWinProbability(teamA, teamB, cfg, state, context);
-      const compression = 1 - cfg.penaltyChaos * 0.72;
-      const p = clamp(0.5 + (raw - 0.5) * compression, 0.36, 0.64);
+      const control = stageWeight(stage);
+      const compression = 1 - cfg.penaltyChaos * clamp(0.62 - control * 0.10, 0.44, 0.62);
+      const p = clamp(0.5 + (raw - 0.5) * compression * (1 + control * 0.22), 0.32, 0.68);
       return rand() < p ? teamA : teamB;
     }
 
@@ -2365,27 +2590,109 @@
       ]));
     }
 
+    function teamNeedProfile(row, matchIndex) {
+      const finalRound = matchIndex >= 4 || row.played >= 2;
+      if (!finalRound) {
+        return { level: "normal", pressure: 0.08, text: `${teamLabel(row.name)}仍在常规抢分区` };
+      }
+      if (row.pts >= 6 || (row.pts >= 4 && row.gd >= 3)) {
+        return { level: "secure", pressure: -0.68, text: `${teamLabel(row.name)}${row.pts}分，基本出线，控分/轮换权重上升` };
+      }
+      if (row.pts >= 4) {
+        return { level: "comfortable", pressure: -0.22, text: `${teamLabel(row.name)}${row.pts}分，拿1分通常更安全` };
+      }
+      if (row.pts <= 1) {
+        return { level: "mustWin", pressure: 0.76, text: `${teamLabel(row.name)}${row.pts}分，必须主动抢分` };
+      }
+      return { level: "chase", pressure: 0.42, text: `${teamLabel(row.name)}${row.pts}分，需要至少拿分` };
+    }
+
+    function motivationContextFromRows(rowA, rowB, matchIndex, cfg) {
+      const force = clamp(cfg.motivation ?? 0, 0, 1);
+      if (force <= 0) return {};
+      const a = teamNeedProfile(rowA, matchIndex);
+      const b = teamNeedProfile(rowB, matchIndex);
+      const finalRound = matchIndex >= 4 || rowA.played >= 2 || rowB.played >= 2;
+      if (!finalRound) {
+        return {
+          tags: ["常规轮次"],
+          notes: [`赛局：${a.text}；${b.text}`]
+        };
+      }
+
+      const swing = a.pressure - b.pressure;
+      const bothSafe = ["secure", "comfortable"].includes(a.level) && ["secure", "comfortable"].includes(b.level);
+      const oneSecure = a.level === "secure" || b.level === "secure";
+      const oneMust = a.level === "mustWin" || b.level === "mustWin";
+      const controlGame = bothSafe || (oneSecure && !oneMust);
+      const drawFriendly = bothSafe || (a.level === "comfortable" && b.level === "comfortable");
+      const outcomeBias = {
+        home: 1 + clamp(swing * 0.18 * force, -0.20, 0.24),
+        away: 1 - clamp(swing * 0.18 * force, -0.24, 0.20),
+        draw: 1 + (drawFriendly ? 0.18 * force : 0) + (controlGame ? 0.08 * force : 0) - (oneMust ? 0.06 * force : 0)
+      };
+
+      return {
+        eloA: swing * 72 * force,
+        eloB: -swing * 72 * force,
+        pace: clamp(
+          1
+          + (oneMust ? 0.07 * force : 0)
+          - (oneSecure ? 0.05 * force : 0)
+          - (drawFriendly ? 0.10 * force : 0),
+          0.86,
+          1.12
+        ),
+        dcShift: drawFriendly ? -0.055 * force : oneMust ? 0.025 * force : 0,
+        drawBias: 1 + (drawFriendly ? 0.20 * force : 0) + (controlGame ? 0.10 * force : 0) - (oneMust ? 0.05 * force : 0),
+        lowTotalBias: 1 + (controlGame ? 0.16 * force : 0) - (oneMust ? 0.05 * force : 0),
+        tailBoost: 1 + (oneMust ? 0.10 * force : 0) - (controlGame ? 0.08 * force : 0),
+        bttsBias: 1 + (oneMust ? 0.06 * force : 0) - (controlGame ? 0.04 * force : 0),
+        favoriteTail: 1 - (controlGame ? 0.08 * force : 0) + (oneMust ? 0.04 * force : 0),
+        outcomeBias,
+        tags: [
+          oneSecure ? "控分轮换" : null,
+          oneMust ? "抢分战意" : null,
+          drawFriendly ? "平局友好" : null
+        ].filter(Boolean),
+        notes: [`赛局：${a.text}；${b.text}`]
+      };
+    }
+
+    function groupTableBeforeFixture(fixture) {
+      const table = blankTable(fixture.group);
+      const results = [];
+      const beforeOrder = fixture.known
+        ? (Number.isFinite(Number(knownResultMeta[fixture.id]?.order)) ? Number(knownResultMeta[fixture.id].order) : Infinity)
+        : Infinity;
+      scheduledFixtures()
+        .filter(other => other.group === fixture.group && other.id !== fixture.id)
+        .forEach(other => {
+          const score = knownResults[other.id];
+          if (!score) return;
+          const meta = knownResultMeta[other.id] || {};
+          const order = Number.isFinite(Number(meta.order)) ? Number(meta.order) : Infinity;
+          if (order >= beforeOrder) return;
+          addResult(table, other.teamA, other.teamB, score[0], score[1], results);
+        });
+      return { table, results, ranked: rankTeams(Object.values(table), results) };
+    }
+
+    function qualificationContext(fixture, cfg) {
+      if (!cfg.useKnown || !GROUPS[fixture.group]) return {};
+      const matchIndex = Number(fixture.id.split("-")[1]) - 1;
+      const { table } = groupTableBeforeFixture(fixture);
+      const rowA = table[fixture.teamA];
+      const rowB = table[fixture.teamB];
+      if (!rowA || !rowB) return {};
+      return motivationContextFromRows(rowA, rowB, matchIndex, cfg);
+    }
+
     function groupMatchContext(fixture, table, matchIndex, cfg) {
       const rowA = table[fixture.teamA];
       const rowB = table[fixture.teamB];
       const formContext = formContextFromStats(fixture.teamA, fixture.teamB, table, cfg);
-      if (matchIndex < 4) return formContext;
-      const secureA = rowA.pts >= 6;
-      const secureB = rowB.pts >= 6;
-      const desperateA = rowA.pts <= 1;
-      const desperateB = rowB.pts <= 1;
-      const drawFriendly = rowA.pts >= 4 && rowB.pts >= 4;
-      const force = cfg.motivation;
-
-      return combineContexts(formContext, {
-        eloA: (secureA ? -95 : desperateA ? 38 : 0) * force,
-        eloB: (secureB ? -95 : desperateB ? 38 : 0) * force,
-        pace: 1
-          + ((desperateA || desperateB) ? 0.06 * force : 0)
-          - ((secureA || secureB) ? 0.04 * force : 0)
-          - (drawFriendly ? 0.12 * force : 0),
-        dcShift: drawFriendly ? -0.05 * force : 0
-      });
+      return combineContexts(formContext, motivationContextFromRows(rowA, rowB, matchIndex, cfg));
     }
 
     function addResult(table, teamA, teamB, goalsA, goalsB, results = null) {
@@ -2483,10 +2790,12 @@
       for (const fixture of fixtures) {
         const matchIndex = Number(fixture.id.split("-")[1]) - 1;
         const groupContext = groupMatchContext(fixture, tables[fixture.group], matchIndex, cfg);
+        const historyContext = historyContextForMatch(fixture.teamA, fixture.teamB, cfg, "GROUP");
+        const baseContext = combineContexts(groupContext, historyContext, { stage: "GROUP" });
         const context = combineContexts(
           tournamentClimateContext(Infinity, cfg),
-          groupContext,
-          matchupScoreContext(fixture.teamA, fixture.teamB, cfg, state, groupContext),
+          baseContext,
+          matchupScoreContext(fixture.teamA, fixture.teamB, cfg, state, baseContext),
           { market: marketLineForFixture(fixture) }
         );
         const score = cfg.useKnown && fixture.known ? fixture.known : simScore(fixture.teamA, fixture.teamB, cfg, rand, state, context);
@@ -2526,7 +2835,7 @@
         const teamA = slots[match.a];
         const group = match.thirdSlot ? thirdAssignments[match.thirdSlot] : null;
         const teamB = match.thirdSlot ? topThirdByGroup[group] : slots[match.b];
-        const winner = knockoutWinner(teamA, teamB, cfg, rand, state);
+        const winner = knockoutWinner(teamA, teamB, cfg, rand, state, "R32");
         winners[match.id] = winner;
         reached.r16.push(winner);
       }
@@ -2534,7 +2843,7 @@
       for (const match of KNOCKOUT) {
         const teamA = winners[match.a];
         const teamB = winners[match.b];
-        const winner = knockoutWinner(teamA, teamB, cfg, rand, state);
+        const winner = knockoutWinner(teamA, teamB, cfg, rand, state, match.stage);
         winners[match.id] = winner;
         if (match.stage === "R16") reached.qf.push(winner);
         if (match.stage === "QF") reached.sf.push(winner);
@@ -2678,17 +2987,19 @@
       const bestExact = model.scores?.[0];
       const sideSpread = Math.abs(model.home - model.away);
       const sideTop = Math.max(model.home, model.away);
+      const gapToBest = best.p - draw.p;
 
       const drawLooksFair =
         bestExact &&
         bestExact.a === bestExact.b &&
-        draw.p >= 0.22 &&
+        draw.p >= 0.27 &&
+        gapToBest <= 0.04 &&
         sideSpread <= 0.12 &&
         sideTop <= 0.45;
 
       const drawIsStrong =
-        draw.p >= 0.30 &&
-        sideSpread <= 0.08 &&
+        draw.p >= 0.31 &&
+        gapToBest <= 0.06 &&
         sideTop <= 0.43;
 
       if (best.key === "draw" || drawLooksFair || drawIsStrong) return draw;
@@ -2764,6 +3075,31 @@
       return over >= under
         ? { label: "大2.5", p: over, band, expected }
         : { label: "小2.5", p: under, band, expected };
+    }
+
+    function outcomeConfidence(model, pick) {
+      const ranked = [
+        { key: "home", p: model.home },
+        { key: "draw", p: model.draw },
+        { key: "away", p: model.away }
+      ].sort((a, b) => b.p - a.p);
+      const gap = ranked[0].p - ranked[1].p;
+      if (pick.key === "draw") return gap >= 0.04 ? "平局信号明确" : "均势保守";
+      if (pick.p >= 0.52 && gap >= 0.12) return "方向集中";
+      if (pick.p >= 0.45 && gap >= 0.07) return "方向偏清晰";
+      return "谨慎观察";
+    }
+
+    function situationSummary(fixture, context, model) {
+      const tags = context.tags?.length ? context.tags : ["常规模型"];
+      const notes = context.notes?.length ? context.notes : ["赛局：按历史强弱、已赛状态和赛果气候综合校准"];
+      const expected = model.lambdaA + model.lambdaB;
+      return {
+        tags,
+        main: notes[0],
+        pace: expected >= 3.2 ? "节奏偏快" : expected <= 2.35 ? "节奏偏慢" : "节奏中性",
+        risk: model.highGoals >= 0.42 ? "大比分风险高" : model.draw >= 0.28 ? "平局权重高" : "方向权重优先"
+      };
     }
 
     function teamProfile(name) {
@@ -2883,6 +3219,8 @@
       const handicap = handicapRecommendation(model);
       const totalPick = totalGoalsRecommendation(model);
       const scores = recommendedScorePack(model, pick.key);
+      const situation = situationSummary(fixture, context, model);
+      const confidence = outcomeConfidence(model, pick);
       const beforeOrder = fixture.known
         ? (Number.isFinite(Number(knownResultMeta[fixture.id]?.order)) ? Number(knownResultMeta[fixture.id].order) : Infinity)
         : Infinity;
@@ -2892,14 +3230,15 @@
       const favoriteNotWin = pick.key === "home" ? model.draw + model.away : pick.key === "away" ? model.home + model.draw : 1 - model.draw;
       const events = eventForecast(fixture.teamA, fixture.teamB, cfg, context);
       const logic = [
-        `客观：Elo差 ${Math.round(eloDiff)}，模型给${pick.label} ${pct(pick.p)}，联动比分 ${scores.primaryText} / ${scores.secondaryText} / ${scores.tertiaryText}`,
+        `客观：Elo差 ${Math.round(eloDiff)}，历史强弱与大赛稳定性已校准，模型给${pick.label} ${pct(pick.p)}，联动比分 ${scores.primaryText} / ${scores.secondaryText} / ${scores.tertiaryText}`,
+        situation.main,
         tournamentClimateLine(beforeOrder),
         `状态：${teamFormLine(fixture.teamA, beforeOrder, cfg)}；${teamFormLine(fixture.teamB, beforeOrder, cfg)}`,
         `球员/风格：${teamLabel(fixture.teamA)}看 ${profileA.players}；${teamLabel(fixture.teamB)}看 ${profileB.players}；${profileA.style} 对 ${profileB.style}`,
         `事件倾向：${events.tension}，下半场黄牌${rangeText(events.second.yellow, "张")}，越位${rangeText(events.first.offside + events.second.offside, "次", 0.8)}`,
         `主观：${model.highGoals > 0.38 ? "本届大比分偏多，防4球以上" : "节奏偏常规"}；${favoriteNotWin > 0.40 ? "热门不胜风险偏高" : "方向相对集中"}`
       ];
-      return { fixture, model, pick, halfPick, handicap, totalPick, scores, logic };
+      return { fixture, model, pick, halfPick, handicap, totalPick, scores, logic, situation, confidence };
     }
 
     function renderTimelinePicks(cfg) {
@@ -2923,8 +3262,11 @@
         const handicap = rec.handicap;
         const totalPick = rec.totalPick;
         const scores = rec.scores;
+        const situation = rec.situation;
+        const pickClass = pick.key === "draw" ? "pick-draw" : pick.key === "away" ? "pick-away" : "pick-home";
+        const tagLine = situation.tags.map(tag => `<span class="model-tag">${tag}</span>`).join("");
         return `
-          <div class="pick-row">
+          <div class="pick-row ${pickClass}">
             <div class="timeblock">
               <strong>${formatMatchTime(fixture.meta)}</strong>
               <span>${fixture.group}组 第${fixture.id.split("-")[1]}场</span>
@@ -2936,6 +3278,26 @@
                 <span class="muted">vs</span>
                 <span>${teamLabel(fixture.teamB)}</span>
                 <span class="pick-badge">${pick.short}</span>
+              </div>
+              <div class="decision-strip">
+                <div class="decision-card primary">
+                  <div class="decision-label">胜平负方向</div>
+                  <div class="decision-value">${pick.label}</div>
+                  <div class="core-detail">${pct(pick.p)}｜${rec.confidence}｜公允 ${odds(pick.p, cfg.margin)}</div>
+                </div>
+                <div class="decision-card">
+                  <div class="decision-label">比分三选</div>
+                  <div class="score-pair"><strong>${scores.primaryText}</strong><span>第1选择</span></div>
+                  <div class="core-detail">备选 ${scores.secondaryText} / ${scores.tertiaryText}｜概率随方向联动</div>
+                </div>
+                <div class="decision-card">
+                  <div class="decision-label">赛局判断</div>
+                  <div class="situation-lines">
+                    <span><b>${situation.pace}</b>｜${situation.risk}</span>
+                    <span>${situation.main}</span>
+                  </div>
+                  ${tagLine}
+                </div>
               </div>
               <div class="core-picks">
                 <div class="core-pick">
@@ -2968,12 +3330,6 @@
                 <span class="mini-chip">双方进球 ${pct(model.btts)}</span>
               </div>
               <div class="logic-lines">${rec.logic.map(line => `<span>${line}</span>`).join("")}</div>
-            </div>
-            <div class="score-stack">
-              <span class="small muted">推荐比分</span>
-              <strong>${scores.primaryText}</strong>
-              <span class="small">备选 ${scores.secondaryText} / ${scores.tertiaryText}</span>
-              <span class="small">公允 ${odds(pick.p, cfg.margin)}</span>
             </div>
           </div>
         `;
@@ -3433,7 +3789,7 @@
       const dayRange = groupedRows.length
         ? `${formatDay(groupedRows[0].date)} 至 ${formatDay(groupedRows[groupedRows.length - 1].date)}`
         : "暂无比赛日";
-      document.getElementById("verifyNote").textContent = `验真按世界杯赛程排序，并以北京时间“天”为单位分组。当前纳入 ${rows.length} 场，覆盖 ${dayRange}，来源：${resultsSync.source}。${sampleLine}绿色代表前3比分命中，红色代表前3比分未中。`;
+      document.getElementById("verifyNote").textContent = `验真按世界杯赛程排序，并以北京时间“天”为单位分组。当前纳入 ${rows.length} 场，覆盖 ${dayRange}，来源：${resultsSync.source}。这里是“当前模型回放历史赛果”，不是赛前锁定发单记录；每次改模型，历史命中率都会重新计算。${sampleLine}绿色代表前3比分命中，红色代表前3比分未中。`;
       document.getElementById("verifyKpis").innerHTML = [
         ["已赛样本", `${rows.length}场`, "样本很小，仅作校准参考"],
         ["胜平负方向", pct(rate("outcomeHit")), "看模型方向是否正确"],
